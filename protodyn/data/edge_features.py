@@ -3,6 +3,7 @@ from MDAnalysis.analysis.dihedrals import Ramachandran, calc_dihedrals
 import numpy as np
 from scipy.spatial import distance_matrix
 from scipy.sparse import coo_matrix
+from protodyn.data.utils import *
 
 # Takes 30 seconds for each frame for a protein of size 415aa
 def compute_sidechain_edges_with_com(protein, filtered_pairs, coms, min_dist_threshold=5.0):

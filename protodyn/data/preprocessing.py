@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import MDAnalysis as mda
 from typing import Dict, Any
 from multiprocessing import Pool
@@ -6,6 +7,7 @@ from MDAnalysis.analysis.dihedrals import Ramachandran
 from protodyn.constants import *
 from protodyn.data.node_features import *
 from protodyn.data.edge_features import *
+from protodyn.data.utils import *
 
 class ProteinGraphBuilder:
     def __init__(self, pdb_file: str, xtc_file: str, selection: str = "protein", threshold: float = 15.0, min_sidechain_dist: float = 5.0, n_jobs: int = None):
@@ -146,8 +148,8 @@ class ProteinGraphBuilder:
 
         return compute_sidechain_edges_with_com(
             self.protein,
-            sidechain_coms,
             self.filtered_pairs,
+            sidechain_coms,
             self.min_sidechain_dist
         )
 

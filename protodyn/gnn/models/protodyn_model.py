@@ -11,6 +11,7 @@ from protodyn.gnn.modules.backbone_gcn import BackboneGCN
 
 class ProtoDynGNN(nn.Module):
     """
+    SideChain Edges represent non-convalent interactions
     Example architecture:
       1) Initialize node features (side-chain, backbone).
       2) (Side-chain) For L layers:

@@ -3,6 +3,8 @@ from MDAnalysis.analysis.dihedrals import Ramachandran, calc_dihedrals
 import numpy as np
 from scipy.spatial import distance_matrix
 from scipy.sparse import coo_matrix
+from protodyn.constants import CHI_DEFINITIONS
+
 
 def gather_chi_quads(protein):
     """
