@@ -174,3 +174,6 @@ pyrightconfig.json
 
 # Raw data
 raw_data/
+
+# Outputs
+outputs/
