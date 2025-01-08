@@ -19,18 +19,18 @@ setup(
     ],
     python_requires='>=3.11',
     install_requires=[
-        'MDAnalysis==2.7.0',
+        'MDAnalysis>=2.7.0',
         'pandas>=2.2.2',
         'requests>=2.32.3',
         'torch>=2.5.0',
         'torch_geometric>=2.6.1',
         'OpenMM==8.1.1',
         "rich>=13.9.2",
-        "dash>=2.17.0",
-        "dash-bootstrap-components>=1.6.0",
-        "dash-core-components>=2.0.0",
-        "dash-html-components>=2.0.0",
-        "dash-molstar==1.1.2"
+        # "dash>=2.17.0",
+        # "dash-bootstrap-components>=1.6.0",
+        # "dash-core-components>=2.0.0",
+        # "dash-html-components>=2.0.0",
+        # "dash-molstar==1.1.2"
     ],
     extras_require={
         "dev": [

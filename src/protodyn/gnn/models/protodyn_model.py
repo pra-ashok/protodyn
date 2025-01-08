@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch_scatter import scatter_add
 
 # Import your building blocks
-from protodyn.gnn.layers.residue_embedding import ResidueEmbedding
+from protodyn.gnn.layers.residue_embeddings import ResidueEmbedding
 from protodyn.gnn.layers.layer_norm_linear import LayerNormLinear
 from protodyn.gnn.modules.sidechain_gcn import SideChainGCN
 from protodyn.gnn.modules.backbone_gcn import BackboneGCN
@@ -80,7 +80,7 @@ class ProtoDynGNN(nn.Module):
                 # Node features (backbone)
                 X_c_alpha, V_c_beta, SBF_phi, SBF_psi,
                 # Distances & Residue info for side-chain edges
-                d_sidechain_com, d_min, residue_idx_i, residue_idx_j,
+                d_sidechain_com, d_min,  b
                 edge_index_sc,
                 # For backbone edges, let's assume we only have adjacency
                 edge_index_bb,
@@ -96,7 +96,7 @@ class ProtoDynGNN(nn.Module):
         h = self.backbone_init(bb_in)
 
         # 2) Initialize side-chain edges
-        res_pair_emb = self.res_embed(residue_idx_i, residue_idx_j)
+        res_pair_emb = self.res_embed(edge_index_sc[:,0], edge_index_sc[:,1])
         if d_sidechain_com.dim() == 1:
             d_sidechain_com = d_sidechain_com.unsqueeze(-1)
         if d_min.dim() == 1:
