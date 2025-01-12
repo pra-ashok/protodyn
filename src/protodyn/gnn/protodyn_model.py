@@ -62,7 +62,8 @@ class NodeEmbedding(nn.Module):
         self.mlp = nn.Sequential(
             Linear(in_features, out_features),
             ReLU(),
-            Dropout(dropout_p)
+            Dropout(dropout_p),
+            Linear(out_features, out_features)
         )
 
     def forward(self, x):
@@ -401,10 +402,6 @@ class ProtodynModel(nn.Module):
         # 3) Initialize node embeddings
         sidechain_nodes = self.sidechain_node_layer(sidechain_node_features)
         backbone_nodes = self.backbone_node_layer(backbone_node_features)
-        print("sidechain_nodes.shape at 3", sidechain_nodes.shape)
-        print("backbone_nodes.shape at 3", backbone_nodes.shape)
-        # print("backbone_nodes.shape", backbone_nodes.shape)
-        print("backbone_nodes at 3--->", backbone_nodes)
 
         # 4) Residue-embedding-based edge features for sidechain
         sc_edge_pairs = edge_index_sc.t().tolist()  # shape (num_sc_edges, 2)
@@ -440,10 +437,7 @@ class ProtodynModel(nn.Module):
 
             # Backbone node update
             backbone_nodes = self.backbone_gat_layers[i](backbone_nodes, edge_index_bb)
-            print("sidechain_nodes.shape", sidechain_nodes.shape)
-            print("Sidechain_nodes", sidechain_nodes)
-            print("backbone_nodes.shape", backbone_nodes.shape)
-            print("backbone_nodes", backbone_nodes)
+
             # Cross-attention: sidechain -> backbone
             attn_weights = self.attention(sidechain_nodes)  # (num_sc_nodes, 1)
             sidechain_to_bb = self.bb_node_update(sidechain_nodes)
@@ -470,8 +464,8 @@ class ProtodynModel(nn.Module):
         psi = (psi + backbone_node_features[:, 7].unsqueeze(1) + torch.pi)%(2*torch.pi) - torch.pi
 
         # Adjust C-alpha
-        print("X_c_alpha.shape from Protodyn_Model", X_c_alpha.shape)
-        print("backbone_node_features.shape from Protodyn_Model", backbone_node_features[:,0:3].shape)
+        # print("X_c_alpha.shape from Protodyn_Model", X_c_alpha.shape)
+        # print("backbone_node_features.shape from Protodyn_Model", backbone_node_features[:,0:3].shape)
         X_c_alpha = X_c_alpha + backbone_node_features[:, 0:3]
 
         return chi_1, chi_2, chi_3, chi_4, v_com, phi, psi, X_c_alpha, V_c_beta
@@ -515,7 +509,7 @@ def test_model(data, device):
         bb_node_feature_size=8,         # random placeholder
         sidechain_edge_attrs_size=3,    # random placeholder
         residue_embeddings=encoded_residues,  # pass the single-letter embeddings
-        dim_h=8,
+        dim_h=64,
         dim_h_edge=4,
         num_layers=8,
         dropout_p=0.1
@@ -561,7 +555,7 @@ def test_model(data, device):
 def test():
     import pickle
 
-    with open("/workspace/protodyn_2/outputs/preprocessed/1zd7_B_R3.pkl", "rb") as f:
+    with open("/workspace/protodyn_2/outputs/preprocessed/1k5n_A_R2.pkl", "rb") as f:
         data = pickle.load(f)
 
      # Create some dummy data

@@ -54,16 +54,16 @@ def calculate_loss(output_data, target_data):
     # Calculate the total loss
     total_loss = chi_1_loss + chi_2_loss + chi_3_loss + chi_4_loss + phi_loss + psi_loss + coords_loss + V_beta_loss + V_com_loss
     loss_dict = {
-        "chi_1_loss": chi_1_loss,
-        "chi_2_loss": chi_2_loss,
-        "chi_3_loss": chi_3_loss,
-        "chi_4_loss": chi_4_loss,
-        "phi_loss": phi_loss,
-        "psi_loss": psi_loss,
-        "coords_loss": coords_loss,
-        "V_beta_loss": V_beta_loss,
-        "V_com_loss": V_com_loss,
-        "total_loss": total_loss
+        "chi_1_loss": chi_1_loss.item(),
+        "chi_2_loss": chi_2_loss.item(),
+        "chi_3_loss": chi_3_loss.item(),
+        "chi_4_loss": chi_4_loss.item(),
+        "phi_loss": phi_loss.item(),
+        "psi_loss": psi_loss.item(),
+        "coords_loss": coords_loss.item(),
+        "V_beta_loss": V_beta_loss.item(),
+        "V_com_loss": V_com_loss.item(),
+        "total_loss": total_loss.item()
     }
 
     return total_loss, loss_dict

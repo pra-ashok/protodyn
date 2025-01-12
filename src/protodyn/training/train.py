@@ -120,10 +120,10 @@ def train_on_gpu(epochs, model_save_path, log_file_path, cuda_device, list_of_fi
                 optimizer.step()
                 
                 traj_loss += loss.item()
-                if ts % 40 == 0:
+                if ts % 40 == 1:
                     traj_loss_1 = traj_loss / ts
                     logger.info(f"loss - ts: {traj_loss_1} - {ts}")
-                    with open(os.path.join(log_file_dir,"loss.json"), 'w') as fd_json:
+                    with open(os.path.join(log_file_dir,"loss.json"), 'a') as fd_json:
                         json.dump(loss_dict, fd_json)
 
                 file_loss = traj_loss / len(data["backbone_node_features"])
