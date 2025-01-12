@@ -61,7 +61,6 @@ class NodeEmbedding(nn.Module):
         super().__init__()
         self.mlp = nn.Sequential(
             Linear(in_features, out_features),
-            BatchNorm1d(out_features),
             ReLU(),
             Dropout(dropout_p)
         )
@@ -172,9 +171,9 @@ class SidechainOutputHeads(nn.Module):
 
         # Final angle decoder for each chi
         self.angle_decoder = nn.Sequential(
-            nn.Linear(dim_h, dim_h),
+            nn.Linear(dim_h, dim_h, bias=False),
             nn.ReLU(),
-            nn.Linear(dim_h, 1)
+            nn.Linear(dim_h, 1, bias=False)
         )
 
         # v_com
@@ -203,8 +202,8 @@ class SidechainOutputHeads(nn.Module):
         angle_mask = torch.tensor(mask_list, device=sidechain_nodes.device, dtype=torch.float32)
         angle_mask = angle_mask.unsqueeze(2)  # Shape becomes (num_nodes, 4, 1)
 
-        print("angle_mask.shape", angle_mask.shape)
-        print("sidechain_nodes.shape", sidechain_nodes.shape)
+        # print("angle_mask.shape", angle_mask.shape)
+        # print("sidechain_nodes.shape", sidechain_nodes.shape)
 
         # Chi 1
         chi_1_mask = angle_mask[:, 0].expand_as(sidechain_nodes)
@@ -242,14 +241,14 @@ class BackboneOutputHeads(nn.Module):
         self.bb_phi = nn.Sequential(
             nn.Linear(dim_h, dim_h),
             nn.ReLU(),
-            nn.Linear(dim_h, 1)
+            nn.Linear(dim_h, 1, bias=False)
         )
 
         # psi
         self.bb_psi = nn.Sequential(
             nn.Linear(dim_h, dim_h),
             nn.ReLU(),
-            nn.Linear(dim_h, 1)
+            nn.Linear(dim_h, 1, bias=False)
         )
 
         # X_c_alpha
@@ -402,6 +401,10 @@ class ProtodynModel(nn.Module):
         # 3) Initialize node embeddings
         sidechain_nodes = self.sidechain_node_layer(sidechain_node_features)
         backbone_nodes = self.backbone_node_layer(backbone_node_features)
+        print("sidechain_nodes.shape at 3", sidechain_nodes.shape)
+        print("backbone_nodes.shape at 3", backbone_nodes.shape)
+        # print("backbone_nodes.shape", backbone_nodes.shape)
+        print("backbone_nodes at 3--->", backbone_nodes)
 
         # 4) Residue-embedding-based edge features for sidechain
         sc_edge_pairs = edge_index_sc.t().tolist()  # shape (num_sc_edges, 2)
@@ -416,12 +419,12 @@ class ProtodynModel(nn.Module):
 
         # Build the residue-based edge feature
         residue_edge_features = self.residue_relation(concatenated_res_tensor)
-        print("residue_edge_features.shape", residue_edge_features.shape)
-        print("sidechain_edge_attrs.shape", sidechain_edge_attrs.shape)
+        # print("residue_edge_features.shape", residue_edge_features.shape)
+        # print("sidechain_edge_attrs.shape", sidechain_edge_attrs.shape)
         # Combine them with the existing sidechain_edge_attrs (Concatenation)
         edge_features = torch.cat((sidechain_edge_attrs,residue_edge_features),dim=1)
-        print("edge_features.shape")
-        print(edge_features.shape)
+        # print("edge_features.shape")
+        # print(edge_features.shape)
 
         # 5) GAT layers
         for i in range(self.num_layers):
@@ -437,7 +440,10 @@ class ProtodynModel(nn.Module):
 
             # Backbone node update
             backbone_nodes = self.backbone_gat_layers[i](backbone_nodes, edge_index_bb)
-
+            print("sidechain_nodes.shape", sidechain_nodes.shape)
+            print("Sidechain_nodes", sidechain_nodes)
+            print("backbone_nodes.shape", backbone_nodes.shape)
+            print("backbone_nodes", backbone_nodes)
             # Cross-attention: sidechain -> backbone
             attn_weights = self.attention(sidechain_nodes)  # (num_sc_nodes, 1)
             sidechain_to_bb = self.bb_node_update(sidechain_nodes)
@@ -452,12 +458,26 @@ class ProtodynModel(nn.Module):
         # 7) Backbone outputs
         phi, psi, X_c_alpha, V_c_beta = self.backbone_outputs(backbone_nodes)
 
+        # Adjust Sidechain outputs
+        chi_1 = (chi_1 + sidechain_node_features[:, 3].unsqueeze(1) + torch.pi)%(2*torch.pi) - torch.pi
+        chi_2 = (chi_2 + sidechain_node_features[:, 4].unsqueeze(1) + torch.pi)%(2*torch.pi) - torch.pi
+        chi_3 = (chi_3 + sidechain_node_features[:, 5].unsqueeze(1) + torch.pi)%(2*torch.pi) - torch.pi
+        chi_4 = (chi_4 + sidechain_node_features[:, 6].unsqueeze(1) + torch.pi)%(2*torch.pi) - torch.pi
+
+
+        # Adjust Backbone outputs
+        phi = (phi + backbone_node_features[:, 6].unsqueeze(1) + torch.pi)%(2*torch.pi) - torch.pi
+        psi = (psi + backbone_node_features[:, 7].unsqueeze(1) + torch.pi)%(2*torch.pi) - torch.pi
+
+        # Adjust C-alpha
+        print("X_c_alpha.shape from Protodyn_Model", X_c_alpha.shape)
+        print("backbone_node_features.shape from Protodyn_Model", backbone_node_features[:,0:3].shape)
+        X_c_alpha = X_c_alpha + backbone_node_features[:, 0:3]
+
         return chi_1, chi_2, chi_3, chi_4, v_com, phi, psi, X_c_alpha, V_c_beta
 
 
-##############################################################################
-# Example usage / Test function
-##############################################################################
+# Test the model
 def test_model(data, device):
     import numpy as np
 
@@ -494,16 +514,12 @@ def test_model(data, device):
         sc_node_feature_size=7,         # random placeholder
         bb_node_feature_size=8,         # random placeholder
         sidechain_edge_attrs_size=3,    # random placeholder
-        residue_embeddings=encoded_residues,  ### pass the single-letter embeddings
+        residue_embeddings=encoded_residues,  # pass the single-letter embeddings
         dim_h=8,
         dim_h_edge=4,
         num_layers=8,
         dropout_p=0.1
     ).to(device)
-
-    # For demonstration, let's say we have 4 nodes,
-    # each node is assigned a single-letter residue code
-    # (this might not make sense biologically, but it demonstrates usage).
     
     sidechain_edges = [[],[]]
     for i,j in data["sidechain_edges"][0]:
@@ -540,6 +556,7 @@ def test_model(data, device):
     print("psi:", psi.shape)          # (4, 1)
     print("X_c_alpha:", X_c_alpha.shape)  # (4, 3)
     print("V_c_beta:", V_c_beta.shape)    # (4, 3)
+    return (chi_1, chi_2, chi_3, chi_4, v_com, phi, psi, X_c_alpha, V_c_beta)
 
 def test():
     import pickle
@@ -549,4 +566,5 @@ def test():
 
      # Create some dummy data
     device = torch.device('cuda:0')
-    test_model(data, device)
+    results = test_model(data, device)
+    return results

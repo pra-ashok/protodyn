@@ -38,7 +38,7 @@ def calculate_ramachandran_angles(pdb_path, xtc_path, selection="protein"):
         phi_psi_angles_radians = np.radians(phi_psi_angles)
 
         # Create padding with NaN for the first and last residues
-        padding = np.full((phi_psi_angles_radians.shape[0], 1, 2), np.nan)
+        padding = np.full((phi_psi_angles_radians.shape[0], 1, 2), 0.0)
 
         # Concatenate padding to the beginning and end of the residue dimension
         padded_phi_psi_angles = np.concatenate([padding, phi_psi_angles_radians, padding], axis=1)
@@ -151,7 +151,7 @@ def compute_sidechain_com_and_cb_vector(residue):
     ca = residue.atoms.select_atoms("name CA")
     cb = residue.atoms.select_atoms("name CB")
     if len(ca) != 1 or len(cb) != 1:
-        return com, None
+        return com, np.array([0.0, 0.0, 0.0])
 
     # Compute the vector from Cα to Cβ
     cb_vector = cb.positions[0] - ca.positions[0]
