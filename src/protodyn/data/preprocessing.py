@@ -8,7 +8,7 @@ from protodyn.constants import *
 from protodyn.data.node_features import *
 from protodyn.data.edge_features import *
 from protodyn.data.utils import *
-from utils import find_pdb_xtc_pairs
+from protodyn.utils import find_pdb_xtc_pairs
 
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,8 @@ class ProteinGraphBuilder:
 
         # Compute initial centroid and sequence
         self.centroid = self.protein.center_of_mass()
-        self.protein_sequence = "".join(res.resname.upper() for res in self.protein.residues)
+        self.protein_sequence = "".join(res for res in self.protein.residues.sequence())
+        logger.info(f"Loaded protein with {len(self.protein)} atoms and sequence: {len(self.protein_sequence)}.")
 
         # Precompute Cα distances and backbone edges
         self.filtered_pairs, self.ca_sparse_matrix = precompute_ca_distances(self.protein, threshold=self.threshold)

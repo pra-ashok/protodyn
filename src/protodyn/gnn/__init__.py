@@ -1,5 +1,5 @@
-from .models import ProtoDynGNN
+from .protodyn_model import ProtodynModel
 
 __all__ = [
-    "ProtoDynGNN"
+    "ProtodynModel"
 ]

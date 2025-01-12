@@ -1,6 +1,6 @@
 import argparse, pathlib
 from protodyn.data.download import download_traj_data
-from protodyn.data.preprocessing import preprocess_protein, bulk_preprocess_proteins
+from protodyn.data.preprocessing import preprocess_protein, preprocess_protein_bulk
 import multiprocessing as mp
 
 def main():
@@ -60,21 +60,24 @@ def main():
         assert cmd_args.xtc.exists(),f"{str(cmd_args.xtc)} does not exist"
         assert cmd_args.output.exists(),f"{str(cmd_args.output)} does not exist"
 
-        if cmd_args.bulk:
-            # Preprocess all the protein trajectories in the directory
-            bulk_preprocess_proteins(
-                str(cmd_args.directory),
-                str(cmd_args.output)
-            )
-        else:
-            # Preprocess the protein
-            preprocess_protein(
-                str(cmd_args.pdb),
-                str(cmd_args.xtc),
-                str(cmd_args.output),
-                cmd_args.selection,
-                cmd_args.chain
-            )
+        # Preprocess the protein
+        preprocess_protein(
+            str(cmd_args.pdb),
+            str(cmd_args.xtc),
+            str(cmd_args.output),
+            cmd_args.selection,
+            cmd_args.chain
+        )
+
+    elif cmd_args.command == "preprocess_bulk":
+        assert cmd_args.directory.exists(), f"{str(cmd_args.directory)} does not exist"
+        assert cmd_args.output.exists(),f"{str(cmd_args.output)} does not exist"
+
+        preprocess_protein_bulk(
+            str(cmd_args.directory),
+            str(cmd_args.output),
+            cmd_args.thread_count
+        )
 
     # elif cmd_args.command == "train":
     #     assert cmd_args.data.exists(), f"{str(cmd_args.data)} does not exist"

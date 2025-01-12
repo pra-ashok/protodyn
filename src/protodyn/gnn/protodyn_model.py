@@ -195,27 +195,36 @@ class SidechainOutputHeads(nn.Module):
         """
         # Build mask for each node => shape (num_sc_nodes, 4)
         mask_list = []
+        print("residue_types", len(residue_types))
         for rtype in residue_types:
             ### MODIFIED ###
             chi_mask_bools = SIDECHAIN_GROUPS_1LETTER.get(rtype, [False, False, False, False])
             mask_list.append(chi_mask_bools)
         angle_mask = torch.tensor(mask_list, device=sidechain_nodes.device, dtype=torch.float32)
+        angle_mask = angle_mask.unsqueeze(2)  # Shape becomes (num_nodes, 4, 1)
+
+        print("angle_mask.shape", angle_mask.shape)
+        print("sidechain_nodes.shape", sidechain_nodes.shape)
 
         # Chi 1
-        sc_chi_1_h = self.sc_chi_1_hidden(sidechain_nodes)
-        chi_1 = self.angle_decoder(sc_chi_1_h) * angle_mask[:, 0:1]
+        chi_1_mask = angle_mask[:, 0].expand_as(sidechain_nodes)
+        sc_chi_1_h = self.sc_chi_1_hidden(sidechain_nodes) * chi_1_mask
+        chi_1 = self.angle_decoder(sc_chi_1_h) 
 
         # Chi 2
-        sc_chi_2_h = self.sc_chi_2_hidden(sidechain_nodes)
-        chi_2 = self.angle_decoder(sc_chi_2_h) * angle_mask[:, 1:2]
+        chi_2_mask = angle_mask[:, 1].expand_as(sidechain_nodes)
+        sc_chi_2_h = self.sc_chi_2_hidden(sidechain_nodes) * chi_2_mask
+        chi_2 = self.angle_decoder(sc_chi_2_h)
 
         # Chi 3
-        sc_chi_3_h = self.sc_chi_3_hidden(sidechain_nodes)
-        chi_3 = self.angle_decoder(sc_chi_3_h) * angle_mask[:, 2:3]
+        chi_3_mask = angle_mask[:, 2].expand_as(sidechain_nodes)
+        sc_chi_3_h = self.sc_chi_3_hidden(sidechain_nodes) * chi_3_mask
+        chi_3 = self.angle_decoder(sc_chi_3_h)
 
         # Chi 4
-        sc_chi_4_h = self.sc_chi_4_hidden(sidechain_nodes)
-        chi_4 = self.angle_decoder(sc_chi_4_h) * angle_mask[:, 3:4]
+        chi_4_mask = angle_mask[:, 3].expand_as(sidechain_nodes)
+        sc_chi_4_h = self.sc_chi_4_hidden(sidechain_nodes) * chi_4_mask
+        chi_4 = self.angle_decoder(sc_chi_4_h)
 
         # v_com (no masking; all residues have a sidechain COM)
         v_com = self.v_com(sidechain_nodes)
@@ -362,11 +371,11 @@ class ProtodynModel(nn.Module):
         """
         data: dict with keys:
           - sequence: list of single-letter residue codes (e.g. ['G','L','Y','S','E',...])
-          - sidechain_node_features: shape (num_sc_nodes, sc_node_feature_size)
-          - backbone_node_features:  shape (num_bb_nodes, bb_node_feature_size)
-          - sidechain_edge_attrs:    shape (num_sc_edges, sidechain_edge_attrs_size)
-          - sidechain_edges:         (2, num_sc_edges) adjacency
-          - backbone_edges:          (2, num_bb_edges) adjacency
+          - sidechain_node_features: shape (num_sc_nodes, sc_node_feature_size) # float tensor
+          - backbone_node_features:  shape (num_bb_nodes, bb_node_feature_size) # float tensor
+          - sidechain_edge_attrs:    shape (num_sc_edges, sidechain_edge_attrs_size) # float tensor
+          - sidechain_edges:         (2, num_sc_edges) adjacency # long tensor
+          - backbone_edges:          (2, num_bb_edges) adjacency # long tensor
         Returns: 
           chi_1, chi_2, chi_3, chi_4, v_com, phi, psi, X_c_alpha, V_c_beta
         """
@@ -407,8 +416,12 @@ class ProtodynModel(nn.Module):
 
         # Build the residue-based edge feature
         residue_edge_features = self.residue_relation(concatenated_res_tensor)
-        # Combine them with the existing sidechain_edge_attrs (simple addition here)
-        edge_features = sidechain_edge_attrs + residue_edge_features
+        print("residue_edge_features.shape", residue_edge_features.shape)
+        print("sidechain_edge_attrs.shape", sidechain_edge_attrs.shape)
+        # Combine them with the existing sidechain_edge_attrs (Concatenation)
+        edge_features = torch.cat((sidechain_edge_attrs,residue_edge_features),dim=1)
+        print("edge_features.shape")
+        print(edge_features.shape)
 
         # 5) GAT layers
         for i in range(self.num_layers):
@@ -504,13 +517,15 @@ def test_model(data, device):
     
     data = {
         'sequence': [ch for ch in data["protein_sequence"]],
-        'sidechain_node_features': torch.tensor(data["sidechain_node_features"][0],device=device),  # shape = (num_sc_nodes, sc_node_feat_size)
-        'backbone_node_features':  torch.tensor(data["backbone_node_features"][0],device=device),  # shape = (num_bb_nodes,  bb_node_feat_size)
-        'sidechain_edge_attrs':    torch.tensor(data["side_chain_edge_attrs"][0],device=device),  # shape = (num_sc_edges, sidechain_edge_attrs_size)
+        'sidechain_node_features': torch.tensor(data["sidechain_node_features"][0],dtype=torch.float32,device=device),  # shape = (num_sc_nodes, sc_node_feat_size)
+        'backbone_node_features':  torch.tensor(data["backbone_node_features"][0],dtype=torch.float32,device=device),  # shape = (num_bb_nodes,  bb_node_feat_size)
+        'sidechain_edge_attrs':    torch.tensor(data["side_chain_edge_attrs"][0],dtype=torch.float32,device=device),  # shape = (num_sc_edges, sidechain_edge_attrs_size)
         'sidechain_edges':         torch.tensor(sidechain_edges, dtype=torch.long, device=device),
         'backbone_edges':          torch.tensor(backbone_edges, dtype=torch.long, device=device),
     }
-
+    print("data['sequence']", data['sequence']) # Error in preprocessing protein sequence
+    print("data['sidechain_node_features']", data['sidechain_node_features'].shape)
+    print("data['backbone_node_features']", data['backbone_node_features'].shape)
     # Forward pass
     (chi_1, chi_2, chi_3, chi_4, v_com,
      phi, psi, X_c_alpha, V_c_beta) = model(data)
@@ -526,8 +541,12 @@ def test_model(data, device):
     print("X_c_alpha:", X_c_alpha.shape)  # (4, 3)
     print("V_c_beta:", V_c_beta.shape)    # (4, 3)
 
+def test():
+    import pickle
 
-if __name__ == "__main__":
+    with open("/workspace/protodyn_2/outputs/preprocessed/1zd7_B_R3.pkl", "rb") as f:
+        data = pickle.load(f)
+
      # Create some dummy data
     device = torch.device('cuda:0')
     test_model(data, device)
