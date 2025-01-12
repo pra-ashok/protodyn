@@ -26,11 +26,12 @@ setup(
         'torch_geometric>=2.6.1',
         'OpenMM==8.1.1',
         "rich>=13.9.2",
-        # "dash>=2.17.0",
-        # "dash-bootstrap-components>=1.6.0",
-        # "dash-core-components>=2.0.0",
-        # "dash-html-components>=2.0.0",
-        # "dash-molstar==1.1.2"
+        "biopython>=1.80",
+        "dash>=2.17.0",
+        "dash-bootstrap-components>=1.6.0",
+        "dash-core-components>=2.0.0",
+        "dash-html-components>=2.0.0",
+        "dash-molstar==1.1.2"
     ],
     extras_require={
         "dev": [
